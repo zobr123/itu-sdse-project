@@ -4,18 +4,21 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from sklearn.preprocessing import MinMaxScaler
+import mlflow 
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
+PREPROCESSING_DIR = ARTIFACTS_DIR / "preprocessing"
+FEATURES_DIR = ARTIFACTS_DIR / "features"
 
-FILTERED_BY_DATE_FILE = ARTIFACTS_DIR / "data_filtered_by_date.csv"
-OUTLIER_SUMMARY_FILE = ARTIFACTS_DIR / "outlier_summary.csv"
-CATEGORICAL_IMPUTATION_FILE = ARTIFACTS_DIR / "categorical_imputation_values.csv"
-FEATURE_SCALER_FILE = ARTIFACTS_DIR / "feature_scaler.pkl"
-FEATURE_COLUMNS_FILE = ARTIFACTS_DIR / "feature_columns.json"
-MODEL_TRAINING_DATA_FILE = ARTIFACTS_DIR / "model_training_data.csv"
-TRAINING_GOLD_DATA_FILE = ARTIFACTS_DIR / "training_data_gold.csv"
+FILTERED_BY_DATE_FILE = PREPROCESSING_DIR / "data_filtered_by_date.csv"
+OUTLIER_SUMMARY_FILE = FEATURES_DIR / "outlier_summary.csv"
+CATEGORICAL_IMPUTATION_FILE = FEATURES_DIR / "categorical_imputation_values.csv"
+FEATURE_SCALER_FILE = FEATURES_DIR / "feature_scaler.pkl"
+FEATURE_COLUMNS_FILE = FEATURES_DIR / "feature_columns.json"
+MODEL_TRAINING_DATA_FILE = FEATURES_DIR / "model_training_data.csv"
+TRAINING_GOLD_DATA_FILE = FEATURES_DIR / "training_data_gold.csv"
 
 
 
@@ -32,9 +35,10 @@ def _numeric_summary(series):
     )
 
 
-def clean_base_data(df):
+def clean_base_data(df, allowed_sources=None):
     df = df.copy()
-    df = df.drop(columns=[
+
+    cols_to_drop = [
         "is_active",
         "marketing_consent",
         "first_booking",
@@ -44,13 +48,18 @@ def clean_base_data(df):
         "country",
         "visited_learn_more_before_booking",
         "visited_faq",
-    ])
+    ]
+    df = df.drop(columns=cols_to_drop, errors="ignore")
 
-    cols = ["lead_indicator", "lead_id", "customer_code"]
-    df[cols] = df[cols].replace("", np.nan)
+    key_cols = ["lead_indicator", "lead_id", "customer_code"]
+    df[key_cols] = df[key_cols].replace("", np.nan)
 
     df = df.dropna(subset=["lead_indicator", "lead_id"])
-    df = df[df.source == "signup"]
+
+    if allowed_sources is None:
+        allowed_sources = ["signup"]
+    df = df[df.source.isin(allowed_sources)]
+
     return df
 
 
@@ -83,6 +92,8 @@ def cap_outliers(continuous, n_std=2):
     capped.apply(_numeric_summary).T.to_csv(
         OUTLIER_SUMMARY_FILE, index=False
     )
+
+    mlflow.log_artifact(OUTLIER_SUMMARY_FILE)
     return capped
 
 def impute_series(series, numeric_strategy="mean"):
@@ -103,6 +114,8 @@ def impute_features(categorical, continuous):
         CATEGORICAL_IMPUTATION_FILE, index=False
     )
 
+    mlflow.log_artifact(CATEGORICAL_IMPUTATION_FILE, artifact_path="data_features")
+
     continuous = continuous.apply(impute_series)
 
     categorical["customer_code"] = (
@@ -119,6 +132,7 @@ def scale_continuous_features(continuous):
     scaler = MinMaxScaler()
     scaler.fit(continuous)
     joblib.dump(scaler, FEATURE_SCALER_FILE)
+    mlflow.log_artifact(FEATURE_SCALER_FILE, artifact_path="data_features")
 
     return pd.DataFrame(
         scaler.transform(continuous),
@@ -140,8 +154,11 @@ def combine_and_record_columns(categorical, continuous):
 
     with open(FEATURE_COLUMNS_FILE, "w") as f:
         json.dump(list(data.columns), f)
+    mlflow.log_artifact(FEATURE_COLUMNS_FILE, artifact_path="data_features")
 
     data.to_csv(MODEL_TRAINING_DATA_FILE, index=False)
+    mlflow.log_artifact(MODEL_TRAINING_DATA_FILE, artifact_path="data_features")
+
     return data
 
 
@@ -170,9 +187,13 @@ def run_feature_engineering(df):
     final = bin_source_feature(combined)
 
     final.to_csv(TRAINING_GOLD_DATA_FILE, index=False)
+    mlflow.log_artifact(TRAINING_GOLD_DATA_FILE, artifact_path="data_features")
+
     return final
 
 
 if __name__ == "__main__":
-    raw = pd.read_csv(FILTERED_BY_DATE_FILE)
-    run_feature_engineering(raw)
+    mlflow.set_experiment("data_features")
+    with mlflow.start_run(run_name="feature_engineering_run"):
+        raw = pd.read_csv(FILTERED_BY_DATE_FILE)
+        run_feature_engineering(raw)
