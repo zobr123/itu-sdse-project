@@ -4,21 +4,19 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from sklearn.preprocessing import MinMaxScaler
-import mlflow 
+import mlflow
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
-PREPROCESSING_DIR = ARTIFACTS_DIR / "preprocessing"
-FEATURES_DIR = ARTIFACTS_DIR / "features"
 
-FILTERED_BY_DATE_FILE = PREPROCESSING_DIR / "data_filtered_by_date.csv"
-OUTLIER_SUMMARY_FILE = FEATURES_DIR / "outlier_summary.csv"
-CATEGORICAL_IMPUTATION_FILE = FEATURES_DIR / "categorical_imputation_values.csv"
-FEATURE_SCALER_FILE = FEATURES_DIR / "feature_scaler.pkl"
-FEATURE_COLUMNS_FILE = FEATURES_DIR / "feature_columns.json"
-MODEL_TRAINING_DATA_FILE = FEATURES_DIR / "model_training_data.csv"
-TRAINING_GOLD_DATA_FILE = FEATURES_DIR / "training_data_gold.csv"
+FILTERED_BY_DATE_FILE = ARTIFACTS_DIR / "data_filtered_by_date.csv"
+OUTLIER_SUMMARY_FILE = ARTIFACTS_DIR / "outlier_summary.csv"
+CATEGORICAL_IMPUTATION_FILE = ARTIFACTS_DIR / "categorical_imputation_values.csv"
+FEATURE_SCALER_FILE = ARTIFACTS_DIR / "feature_scaler.pkl"
+FEATURE_COLUMNS_FILE = ARTIFACTS_DIR / "feature_columns.json"
+MODEL_TRAINING_DATA_FILE = ARTIFACTS_DIR / "model_training_data.csv"
+TRAINING_GOLD_DATA_FILE = ARTIFACTS_DIR / "training_data_gold.csv"
 
 
 
@@ -33,7 +31,6 @@ def _numeric_summary(series):
         ],
         index=["Count", "Missing", "Mean", "Min", "Max"],
     )
-
 
 def clean_base_data(df, allowed_sources=None):
     df = df.copy()
@@ -61,7 +58,6 @@ def clean_base_data(df, allowed_sources=None):
     df = df[df.source.isin(allowed_sources)]
 
     return df
-
 
 def split_feature_types(df):
     df = df.copy()
@@ -114,7 +110,7 @@ def impute_features(categorical, continuous):
         CATEGORICAL_IMPUTATION_FILE, index=False
     )
 
-    mlflow.log_artifact(CATEGORICAL_IMPUTATION_FILE, artifact_path="data_features")
+    mlflow.log_artifact(CATEGORICAL_IMPUTATION_FILE)
 
     continuous = continuous.apply(impute_series)
 
@@ -132,7 +128,7 @@ def scale_continuous_features(continuous):
     scaler = MinMaxScaler()
     scaler.fit(continuous)
     joblib.dump(scaler, FEATURE_SCALER_FILE)
-    mlflow.log_artifact(FEATURE_SCALER_FILE, artifact_path="data_features")
+    mlflow.log_artifact(FEATURE_SCALER_FILE)
 
     return pd.DataFrame(
         scaler.transform(continuous),
@@ -154,10 +150,10 @@ def combine_and_record_columns(categorical, continuous):
 
     with open(FEATURE_COLUMNS_FILE, "w") as f:
         json.dump(list(data.columns), f)
-    mlflow.log_artifact(FEATURE_COLUMNS_FILE, artifact_path="data_features")
+    mlflow.log_artifact(FEATURE_COLUMNS_FILE)
 
     data.to_csv(MODEL_TRAINING_DATA_FILE, index=False)
-    mlflow.log_artifact(MODEL_TRAINING_DATA_FILE, artifact_path="data_features")
+    mlflow.log_artifact(MODEL_TRAINING_DATA_FILE)
 
     return data
 
@@ -187,7 +183,7 @@ def run_feature_engineering(df):
     final = bin_source_feature(combined)
 
     final.to_csv(TRAINING_GOLD_DATA_FILE, index=False)
-    mlflow.log_artifact(TRAINING_GOLD_DATA_FILE, artifact_path="data_features")
+    mlflow.log_artifact(TRAINING_GOLD_DATA_FILE)
 
     return final
 
