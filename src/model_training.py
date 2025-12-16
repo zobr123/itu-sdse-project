@@ -15,7 +15,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
 
 TRAINING_GOLD_DATA_FILE = ARTIFACTS_DIR / "training_data_gold.csv"
-XGBOOST_MODEL_FILE = ARTIFACTS_DIR / "xgboost_model.json"
+XGBOOST_MODEL_FILE = ARTIFACTS_DIR / "xgboost_model.pkl"
 LOGISTIC_REGRESSION_MODEL_FILE = ARTIFACTS_DIR / "logistic_regression_model.pkl"
 X_TEST_FILE = ARTIFACTS_DIR / "X_test.csv"
 Y_TEST_FILE = ARTIFACTS_DIR / "y_test.csv"
@@ -96,9 +96,12 @@ def main():
     X_test.to_csv(X_TEST_FILE, index=False)
     y_test.to_csv(Y_TEST_FILE, index=False)
 
-    experiment_name = datetime.datetime.now().strftime("%Y_%m_%d")
+    experiment_name = "model-training"
     mlflow.set_experiment(experiment_name)
     experiment = mlflow.get_experiment_by_name(experiment_name)
+
+    run_name_xgb = f"xgb_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    run_name_lr = f"lr_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
     param_xgb = {
         "learning_rate": uniform(0.01, 0.3),
@@ -112,7 +115,7 @@ def main():
         "C": [0.1, 1, 10],
     }
 
-    with mlflow.start_run(experiment_id=experiment.experiment_id, run_name="xgb"):
+    with mlflow.start_run(experiment_id=experiment.experiment_id, run_name=run_name_xgb):
         train_single_model(
             XGBRFClassifier,
             param_xgb,
@@ -122,7 +125,7 @@ def main():
             "xgboost",
         )
 
-    with mlflow.start_run(experiment_id=experiment.experiment_id, run_name="lr"):
+    with mlflow.start_run(experiment_id=experiment.experiment_id, run_name=run_name_lr):
         train_single_model(
             LogisticRegression,
             param_lr,
@@ -131,6 +134,7 @@ def main():
             LOGISTIC_REGRESSION_MODEL_FILE,
             "sklearn",
         )
+
 
 
 if __name__ == "__main__":
