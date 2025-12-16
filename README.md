@@ -43,11 +43,7 @@ The repository is organized as follows:
 
 ### 1. Using GitHub Actions Workflow
 
-The project can be executed entirely through GitHub Actions directly from GitHub, which automates the full MLOps pipeline.
-
-Prerequisites
-
-A public GitHub repository containing the project.
+The project can be executed entirely through GitHub Actions, which automates the full MLOps pipeline.
 
 **Manual Trigger**
 - Go to the repository **Actions** tab.
@@ -68,9 +64,9 @@ After a successful run, the workflow automatically uploads:
 ### 2. Locally 
 Make sure the following tools are installed on your machine:
 
-**Docker Desktop:** Must be installed and running (required by Dagger).
-**Go (≥ 1.21):** Used to run the pipeline orchestrator (go/pipeline.go).
-**DVC:** Used to pull the dataset from a remote source.
+- **Docker Desktop:** Must be installed and running (required by Dagger).
+- **Go (≥ 1.21):** Used to run the pipeline orchestrator (go/pipeline.go).
+- **DVC:** Used to pull the dataset from a remote source.
 
 **1. Clone the Repository**
 ```bash
