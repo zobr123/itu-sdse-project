@@ -31,7 +31,7 @@ func main() {
 	runStep("Data preprocessing", "python", "src/data_preprocessing.py")
 	runStep("Feature engineering", "python", "src/data_features.py")
 	runStep("Model training", "python", "src/model_training.py")
-	runStep("Model evaluation and deployment", "python", "src/model_evaluation.py")
+	runStep("Model evaluation and deployment", "python", "src/model_evaluation_and_deployment.py")
 
 	fmt.Println("Pipeline finished successfully")
 }

@@ -77,7 +77,7 @@ jobs:
       - name: Run model evaluation and deployment
         run: |
           export PYTHONPATH=src
-          python src/model_evaluation.py
+          python src/model_evaluation_and_deployment.py
 
       - name: Upload model artifact
         uses: actions/upload-artifact@v4
